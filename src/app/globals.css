@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Geist", system-ui, sans-serif;
+
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(14.5% 0 0);
+
+  --color-primary: oklch(50% 0.2 260);
+  /* Indigo */
+  --color-primary-foreground: oklch(98% 0 0);
+
+  --color-secondary: oklch(96% 0.01 240);
+  --color-secondary-foreground: oklch(30% 0.05 240);
+
+  --color-accent: oklch(85% 0.2 300);
+  /* Purple-ish */
+  --color-accent-foreground: oklch(25% 0.1 300);
+
+  --color-destructive: oklch(60% 0.2 20);
+  --color-destructive-foreground: oklch(98% 0 0);
+
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(14.5% 0 0);
+
+  --color-border: oklch(92% 0.01 240);
+  --color-input: oklch(92% 0.01 240);
+
+  --color-muted: oklch(96% 0.01 240);
+  --color-muted-foreground: oklch(55% 0.03 240);
+}
+
+.dark {
+  --color-background: oklch(14.5% 0 0);
+  --color-foreground: oklch(98% 0 0);
+
+  --color-primary: oklch(65% 0.2 260);
+  --color-primary-foreground: oklch(10% 0 0);
+
+  --color-secondary: oklch(20% 0.02 240);
+  --color-secondary-foreground: oklch(90% 0.05 240);
+
+  --color-card: oklch(18% 0.01 240);
+  --color-card-foreground: oklch(98% 0 0);
+
+  --color-border: oklch(25% 0.02 240);
+  --color-input: oklch(25% 0.02 240);
+
+  --color-muted: oklch(20% 0.02 240);
+  --color-muted-foreground: oklch(65% 0.03 240);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased transition-colors duration-300;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl;
+  }
+
+  .grad-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500;
+  }
+
+  .grad-bg {
+    @apply bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700;
+  }
+
+  .animate-scan-line {
+    animation: scan 2.5s ease-in-out infinite;
+  }
+}
+
+@keyframes scan {
+
+  0%,
+  100% {
+    top: 5%;
+    opacity: 0.3;
+  }
+
+  50% {
+    top: 95%;
+    opacity: 1;
+  }
+}
