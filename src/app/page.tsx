@@ -632,9 +632,10 @@ function HomeContent() {
       {/* Success Modal */}
       <Modal isOpen={isSuccessModalOpen} onClose={() => setIsSuccessModalOpen(false)} title="VERIFICATION_SUCCESS">
         <div className="flex flex-col items-center py-10 text-center space-y-10 animate-in zoom-in-75 duration-700">
-          <div className="w-32 h-32 rounded-[3.5rem] bg-green-500/10 flex items-center justify-center border-[6px] border-green-500/20 relative">
+          <div className="w-32 h-32 rounded-[3.5rem] bg-green-500/10 flex items-center justify-center border-[6px] border-green-500/20 relative overflow-hidden">
             <CheckCircle2 className="w-20 h-20 text-green-500 relative z-10" />
             <div className="absolute inset-0 rounded-[3rem] bg-green-500 opacity-20 animate-ping"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-green-400/50 shadow-[0_0_15px_rgba(74,222,128,0.8)] animate-[scan-line_2s_ease-in-out_infinite]"></div>
           </div>
           <div className="space-y-3">
             <h3 className="text-5xl font-black tracking-tighter text-green-600 uppercase italic">Entry Uploaded</h3>

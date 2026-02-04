@@ -134,7 +134,14 @@ export function Scanner({ onScan, onClose }: ScannerProps) {
                     {isInitializing && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-zinc-950 z-20">
                             <RefreshCw className="w-12 h-12 animate-spin text-primary mb-6" />
-                            <p className="text-xl font-black tracking-tighter animate-pulse text-primary italic uppercase">Initializing Sensor...</p>
+                            <div className="space-y-1 text-center">
+                                <p className="text-xl font-black tracking-tighter animate-pulse text-primary italic uppercase">
+                                    INITIALIZING_OPTICS...
+                                </p>
+                                <p className="text-[10px] text-zinc-500 font-mono">
+                                    CALIBRATING FOCUS RING...
+                                </p>
+                            </div>
                         </div>
                     )}
 

@@ -1,22 +1,87 @@
-import { promises as fs } from "fs";
+import { kv } from "@vercel/kv";
 import { NextResponse } from "next/server";
+import fs from "fs/promises";
 import path from "path";
 
-const DB_PATH = path.join(process.cwd(), "src/app/api/db.json");
+interface AttendanceRecord {
+    id: string;
+    studentName: string;
+    studentId: string;
+    timestamp: string;
+    day: string;
+    sessionId: string;
+    sessionName: string;
+}
 
-async function getDb() {
+interface SessionInfo {
+    id: string;
+    name: string;
+}
+
+interface Database {
+    activeSession: SessionInfo | null;
+    records: AttendanceRecord[];
+}
+
+// Fallback for local development without KV configured
+const useFallback = !process.env.KV_REST_API_URL;
+const DB_PATH = path.join(process.cwd(), "db.json");
+
+// Initial empty state
+const defaultDb: Database = {
+    activeSession: null,
+    records: [],
+};
+
+async function getDb(): Promise<Database> {
+    if (useFallback) {
+        try {
+            const data = await fs.readFile(DB_PATH, "utf-8");
+            return JSON.parse(data);
+        } catch (error) {
+            // If file doesn't exist, return default and create it
+            return defaultDb;
+        }
+    }
+
     try {
-        const data = await fs.readFile(DB_PATH, "utf8");
-        return JSON.parse(data);
-    } catch (e) {
-        const initial = { activeSession: null, records: [] };
-        await fs.writeFile(DB_PATH, JSON.stringify(initial), "utf8");
-        return initial;
+        const [activeSession, records] = await Promise.all([
+            kv.get<SessionInfo | null>("activeSession"),
+            kv.get<AttendanceRecord[]>("records"),
+        ]);
+
+        return {
+            activeSession: activeSession || null,
+            records: records || [],
+        };
+    } catch (error) {
+        console.error("KV Error:", error);
+        // Fallback to local file if KV fails
+        try {
+            const data = await fs.readFile(DB_PATH, "utf-8");
+            return JSON.parse(data);
+        } catch (e) {
+            return defaultDb;
+        }
     }
 }
 
-async function saveDb(data: any) {
-    await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), "utf8");
+async function saveDb(data: Database): Promise<void> {
+    if (useFallback) {
+        await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
+        return;
+    }
+
+    try {
+        await Promise.all([
+            kv.set("activeSession", data.activeSession),
+            kv.set("records", data.records),
+        ]);
+    } catch (error) {
+        console.error("KV Save Error:", error);
+        // Fallback to local file
+        await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
+    }
 }
 
 export async function GET() {
@@ -33,10 +98,14 @@ export async function POST(req: Request) {
             db.activeSession = payload;
             break;
         case "ADD_RECORD":
-            db.records = [payload, ...db.records];
+            // Prevent duplicates server-side as well
+            const exists = db.records.some(r => r.studentId === payload.studentId && r.sessionId === payload.sessionId);
+            if (!exists) {
+                db.records = [payload, ...db.records];
+            }
             break;
         case "DELETE_RECORD":
-            db.records = db.records.filter((r: any) => r.id !== payload);
+            db.records = db.records.filter((r: AttendanceRecord) => r.id !== payload);
             break;
         case "CLEAR_RECORDS":
             db.records = [];
