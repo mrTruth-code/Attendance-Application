@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { useSearchParams } from "next/navigation";
 import {
   Scan,
@@ -20,7 +20,8 @@ import {
   FileText,
   Settings2,
   Radio,
-  Wifi
+  Wifi,
+  Share2
 } from "lucide-react";
 import { Card, Button, Input, cn, Badge, Modal } from "./components";
 import { Scanner } from "./scanner";
@@ -354,7 +355,7 @@ function HomeContent() {
                 </div>
 
                 <div className="w-48 h-48 bg-white p-4 rounded-[2.5rem] shadow-xl border-4 border-primary/10 flex-shrink-0 animate-in fade-in slide-in-from-left-4 duration-700 relative z-10">
-                  <QRCodeSVG value={JSON.stringify(currentSession)} size={160} level="H" />
+                  <QRCodeCanvas value={JSON.stringify(currentSession)} size={160} level="H" />
                 </div>
 
                 <div className="flex-1 text-center md:text-left space-y-6 relative z-10">
@@ -513,7 +514,8 @@ function HomeContent() {
                 {currentSession ? (
                   <div className="space-y-10 w-full flex flex-col items-center">
                     <div className="p-10 bg-white rounded-[4rem] border-8 border-zinc-100 shadow-2xl animate-in zoom-in-75">
-                      <QRCodeSVG
+                      <QRCodeCanvas
+                        id="qr-code-canvas"
                         value={`${typeof window !== 'undefined' ? window.location.origin : ''}/?sessionID=${currentSession.id}&sessionName=${encodeURIComponent(currentSession.name)}`}
                         size={240}
                         level="H"
@@ -541,6 +543,45 @@ function HomeContent() {
                       </div>
                     </div>
 
+                    <Button variant="outline" size="lg" onClick={async () => {
+                      const url = `${window.location.origin}/?sessionID=${currentSession.id}&sessionName=${encodeURIComponent(currentSession.name)}`;
+                      const canvas = document.getElementById("qr-code-canvas") as HTMLCanvasElement;
+
+                      if (canvas) {
+                        canvas.toBlob(async (blob) => {
+                          if (!blob) return;
+                          const file = new File([blob], "attendance_qr.png", { type: "image/png" });
+
+                          if (navigator.share && navigator.canShare({ files: [file] })) {
+                            try {
+                              await navigator.share({
+                                title: 'Join Attendance',
+                                text: `Scan to join ${currentSession.name}`,
+                                files: [file],
+                                url
+                              });
+                            } catch (e) {
+                              console.error("Share failed", e);
+                            }
+                          } else {
+                            // Fallback: Download image + Copy Link
+                            const link = document.createElement('a');
+                            link.href = canvas.toDataURL("image/png");
+                            link.download = `qr_${currentSession.name.replace(/\s+/g, '_')}.png`;
+                            link.click();
+
+                            await navigator.clipboard.writeText(url);
+                            alert("QR Image Downloaded & Link Copied!");
+                          }
+                        });
+                      } else {
+                        // Fallback if canvas missing
+                        await navigator.clipboard.writeText(url);
+                        alert("Link Copied (QR Image unavailable)");
+                      }
+                    }} className="w-full h-18 rounded-2xl font-black border-primary/30 text-primary hover:bg-primary hover:text-white transition-all uppercase text-xs mb-4">
+                      <Share2 className="w-5 h-5 mr-2" /> SHARE SIGNAL
+                    </Button>
                     <Button variant="outline" size="lg" onClick={removeSession} className="w-full h-18 rounded-2xl font-black border-destructive/30 text-destructive hover:bg-destructive hover:text-white transition-all uppercase text-xs">TERMINATE SIGNAL</Button>
                   </div>
                 ) : (
