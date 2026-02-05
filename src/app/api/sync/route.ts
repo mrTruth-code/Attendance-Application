@@ -38,9 +38,14 @@ async function getDb(): Promise<Database> {
         try {
             const data = await fs.readFile(DB_PATH, "utf-8");
             return JSON.parse(data);
-        } catch (error) {
-            // If file doesn't exist, return default and create it
-            return defaultDb;
+        } catch (error: any) {
+            // If file doesn't exist, return default
+            if (error.code === 'ENOENT') {
+                return defaultDb;
+            }
+            // Real error (permissions/disk/lock) - throw so we don't overwrite!
+            console.error("[DB] Read Error:", error);
+            throw error;
         }
     }
 
@@ -68,7 +73,14 @@ async function getDb(): Promise<Database> {
 
 async function saveDb(data: Database): Promise<void> {
     if (useFallback) {
-        await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
+        const tempPath = `${DB_PATH}.tmp`;
+        try {
+            await fs.writeFile(tempPath, JSON.stringify(data, null, 2));
+            await fs.rename(tempPath, DB_PATH);
+        } catch (e) {
+            console.error("[DB] Save Error:", e);
+            throw e;
+        }
         return;
     }
 
@@ -79,8 +91,10 @@ async function saveDb(data: Database): Promise<void> {
         ]);
     } catch (error) {
         console.error("KV Save Error:", error);
-        // Fallback to local file
-        await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
+        // Fallback to local file with same atomic safety
+        const tempPath = `${DB_PATH}.tmp`;
+        await fs.writeFile(tempPath, JSON.stringify(data, null, 2));
+        await fs.rename(tempPath, DB_PATH);
     }
 }
 
@@ -108,7 +122,9 @@ export async function POST(req: Request) {
             db.records = db.records.filter((r: AttendanceRecord) => r.id !== payload);
             break;
         case "CLEAR_RECORDS":
-            db.records = [];
+            // Protection: User requested data NOT to be erased. 
+            // We disable this global clear action to prevent accidents.
+            console.warn("Attempt to clear records blocked for safety.");
             break;
         case "CLEAR_SESSION":
             db.activeSession = null;

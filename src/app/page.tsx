@@ -194,7 +194,8 @@ function HomeContent() {
   const createSession = useCallback(async () => {
     if (!newSessionName.trim()) return;
     const session: SessionInfo = { id: "session_" + Date.now(), name: newSessionName };
-    await fetch("/api/sync", {
+    // Records are preserved server-side during this POST
+    const res = await fetch("/api/sync", {
       method: "POST",
       body: JSON.stringify({ action: "SET_SESSION", payload: session }),
     });
