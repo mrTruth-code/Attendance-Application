@@ -46,6 +46,7 @@ function HomeContent() {
   // Data State
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [currentSession, setCurrentSession] = useState<SessionInfo | null>(null);
+  const [storageMode, setStorageMode] = useState<"LOCAL" | "CLOUD" | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
   // Student Input State
@@ -74,6 +75,7 @@ function HomeContent() {
       const data = await res.json();
       setRecords(data.records || []);
       setCurrentSession(data.activeSession);
+      setStorageMode(data.storageMode);
       setIsOnline(true);
     } catch (e) {
       setIsOnline(false);
@@ -344,6 +346,17 @@ function HomeContent() {
               <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
             <span className="font-extrabold text-2xl md:text-3xl tracking-tighter">Admin<span className="text-primary font-black">Console</span></span>
+            {storageMode && (
+              <Badge
+                variant={storageMode === "CLOUD" ? "primary" : "destructive"}
+                className={cn(
+                  "ml-2 text-[8px] tracking-[0.2em] px-2",
+                  storageMode === "LOCAL" && "animate-pulse"
+                )}
+              >
+                {storageMode === "CLOUD" ? "✓ CLOUD_STORAGE_ACTIVE" : "⚠ LOCAL_EPHEMERAL_STORAGE"}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-6">
             <Button variant="ghost" onClick={() => setIsAdminLoggedIn(false)} className="rounded-2xl font-bold text-destructive hover:bg-destructive/10 text-xs md:text-sm">
@@ -459,7 +472,7 @@ function HomeContent() {
                   {records.length === 0 ? (
                     <div className="text-center py-20 md:py-32 text-muted-foreground">
                       <History className="w-12 h-12 md:w-16 md:h-16 opacity-10 mx-auto mb-6 md:mb-10" />
-                      <p className="text-3xl md:text-5xl font-black text-zinc-300 uppercase italic">Empty Queue</p>
+                      <p className="text-3xl md:text-5xl font-black text-zinc-300 uppercase italic">Store Queue</p>
                     </div>
                   ) : (
                     days.map((day: string) => {

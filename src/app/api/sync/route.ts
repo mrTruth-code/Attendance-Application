@@ -118,7 +118,10 @@ async function saveDb(data: Database): Promise<void> {
 
 export async function GET() {
     const db = await getDb();
-    return NextResponse.json(db);
+    return NextResponse.json({
+        ...db,
+        storageMode: useFallback ? "LOCAL" : "CLOUD"
+    });
 }
 
 export async function POST(req: Request) {
@@ -150,5 +153,8 @@ export async function POST(req: Request) {
     }
 
     await saveDb(db);
-    return NextResponse.json(db);
+    return NextResponse.json({
+        ...db,
+        storageMode: useFallback ? "LOCAL" : "CLOUD"
+    });
 }
