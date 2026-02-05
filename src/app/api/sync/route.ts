@@ -27,6 +27,17 @@ interface Database {
 const useFallback = !process.env.KV_REST_API_URL;
 const DB_PATH = path.join(process.cwd(), "db.json");
 
+/**
+ * Helper to wrap a promise with a timeout.
+ * Prevents the API from hanging on slow Vercel KV connections.
+ */
+async function withTimeout<T>(promise: Promise<T>, ms: number = 5000): Promise<T> {
+    const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("KV_TIMEOUT")), ms)
+    );
+    return Promise.race([promise, timeout]);
+}
+
 // Initial empty state
 const defaultDb: Database = {
     activeSession: null,
@@ -50,23 +61,30 @@ async function getDb(): Promise<Database> {
     }
 
     try {
-        const [activeSession, records] = await Promise.all([
+        // Use timeout to prevent hanging on KV
+        const [activeSession, records] = await withTimeout(Promise.all([
             kv.get<SessionInfo | null>("activeSession"),
             kv.get<AttendanceRecord[]>("records"),
-        ]);
+        ]));
 
         return {
             activeSession: activeSession || null,
             records: records || [],
         };
-    } catch (error) {
-        console.error("KV Error:", error);
-        // Fallback to local file if KV fails
+    } catch (error: any) {
+        console.error("KV Error or Timeout:", error);
+
+        // CRITICAL FALLBACK: Try to read from local file
         try {
             const data = await fs.readFile(DB_PATH, "utf-8");
             return JSON.parse(data);
-        } catch (e) {
-            return defaultDb;
+        } catch (e: any) {
+            // If the local file ALSO doesn't exist, ONLY then return empty
+            if (e.code === 'ENOENT') {
+                return defaultDb;
+            }
+            // If there's a real read error, THROW. Don't return empty or you'll overwrite KV with nothing!
+            throw new Error("RELIABILITY_FAILURE: Could not load data from any source.");
         }
     }
 }
@@ -85,13 +103,13 @@ async function saveDb(data: Database): Promise<void> {
     }
 
     try {
-        await Promise.all([
+        await withTimeout(Promise.all([
             kv.set("activeSession", data.activeSession),
             kv.set("records", data.records),
-        ]);
-    } catch (error) {
-        console.error("KV Save Error:", error);
-        // Fallback to local file with same atomic safety
+        ]));
+    } catch (error: any) {
+        console.error("KV Save Error or Timeout:", error);
+        // Fallback to local file with atomic safety
         const tempPath = `${DB_PATH}.tmp`;
         await fs.writeFile(tempPath, JSON.stringify(data, null, 2));
         await fs.rename(tempPath, DB_PATH);
